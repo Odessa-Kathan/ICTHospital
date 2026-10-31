@@ -29,13 +29,13 @@
 </style>
 </head>
 <body>
-@php($institute = \Illuminate\Support\Facades\Schema::hasTable('institute') && \Illuminate\Support\Facades\Schema::hasColumn('institute', 'name') ? \Illuminate\Support\Facades\DB::table('institute')->value('name') : null)
+@php($institute = config('clinic.name'))
 @if ($wristband)
   <div class="band">
     <div>
       <div class="hosp">{{ $institute ?: 'Hospital' }}</div>
       <div class="name" style="margin:1mm 0">{{ $patient->name }}</div>
-      <div class="meta">MR {{ $patient->patient_id }} &middot; {{ $patient->age !== '' ? $patient->age . ' y' : '' }} {{ $patient->sex ? ucfirst($patient->sex) : '' }}
+      <div class="meta">MR {{ $patient->patient_id }} &middot; {{ $patient->current_age !== '' ? $patient->current_age . ' y' : '' }}{{ $patient->birthdate_estimated ? ' (estimated)' : '' }} {{ $patient->sex ? ucfirst($patient->sex) : '' }}
         {{ $patient->bloodgroup ? '· ' . $patient->bloodgroup : '' }} @if ($patient->mlc)<span class="mlc">· MLC</span>@endif</div>
     </div>
     <img class="bc" src="{{ $barcode }}" alt="{{ $patient->patient_id }}">

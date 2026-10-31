@@ -13,7 +13,23 @@
 @stop
 @section('content')
 
-    @php($editing = (bool) $patient->id)
+    @php
+        $editing = (bool) $patient->id;
+        $ageOnly = (bool) old('age_only', ! $editing || $patient->birthdate_estimated || ! $patient->birthdate);
+        $previewOriginalAge = $patient->current_age;
+        if ($editing && old('birthdate_baseline')) {
+            try {
+                $snapshot = json_decode(\Illuminate\Support\Facades\Crypt::decryptString(old('birthdate_baseline')), true);
+                if (($snapshot['id'] ?? null) === $patient->id
+                    && ($snapshot['birthdate'] ?? null) === $patient->birthdate
+                    && ($snapshot['estimated'] ?? null) === $patient->birthdate_estimated) {
+                    $previewOriginalAge = (string) $snapshot['age'];
+                }
+            } catch (\Throwable $e) {
+                // A tampered snapshot is rejected on submission, never trusted for a preview.
+            }
+        }
+    @endphp
 
     <div class="row">
         <div class="box col-md-12">
@@ -77,10 +93,21 @@
 
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>Date of birth</label>
-                                    <input type="date" name="birthdate" class="form-control"
-                                           value="{{ old('birthdate', $patient->birthdate) }}">
-                                    <span class="help-block">Age is worked out from this, so it never goes stale.</span>
+                                    <input type="hidden" name="age_only" value="0">
+                                    <input type="hidden" name="birthdate_reference_year" value="{{ \Illuminate\Support\Facades\Crypt::encryptString((string) now()->year) }}">
+                                    <div class="checkbox">
+                                        <label for="age-only"><input type="checkbox" id="age-only" name="age_only" value="1" {{ $ageOnly ? 'checked' : '' }}> I know only age</label>
+                                    </div>
+                                    <label for="patient-age">Age (years)</label>
+                                    <input type="number" id="patient-age" name="age" class="form-control" min="0" max="150" step="1"
+                                           value="{{ old('age', $patient->current_age) }}" aria-describedby="birthdate-help">
+                                    <label for="patient-birthdate" style="margin-top:10px">Date of birth (optional)</label>
+                                    <input type="date" id="patient-birthdate" name="birthdate" class="form-control" max="{{ now()->toDateString() }}"
+                                           value="{{ old('birthdate', $patient->birthdate) }}" aria-describedby="birthdate-help">
+                                    <span class="help-block" id="birthdate-help" aria-live="polite">{{ $ageOnly ? 'Estimated date of birth: January 1 of the current year minus the age entered. Leave age blank if unknown.' : 'Enter the known date of birth, or leave it blank if unknown. Age is calculated from this date.' }}</span>
+                                    @if ($editing)
+                                        <input type="hidden" name="birthdate_baseline" value="{{ old('birthdate_baseline', \Illuminate\Support\Facades\Crypt::encryptString(json_encode(['id' => $patient->id, 'birthdate' => $patient->birthdate, 'estimated' => $patient->birthdate_estimated, 'age' => $patient->current_age]))) }}">
+                                    @endif
                                 </div>
                                 <div class="form-group">
                                     <label>Sex</label>
@@ -195,6 +222,41 @@
 @stop
 @section('script')
 <script>
+// Kept separate from camera setup: registration also works without camera APIs.
+(function () {
+    var mode = document.getElementById('age-only');
+    var age = document.getElementById('patient-age');
+    var dob = document.getElementById('patient-birthdate');
+    var help = document.getElementById('birthdate-help');
+    var year = {{ now()->year }};
+    var originalAge = @json($previewOriginalAge);
+    var originalDob = @json($patient->birthdate);
+    var originalEstimated = @json((bool) $patient->birthdate_estimated);
+    var exactDob = mode.checked ? '' : dob.value;
+    function render() {
+        age.disabled = !mode.checked;
+        dob.readOnly = mode.checked;
+        if (!mode.checked) {
+            help.textContent = 'Enter the known date of birth, or leave it blank if unknown. Age is calculated from this date.';
+            return;
+        }
+        if (age.value === '' || !age.validity.valid) {
+            dob.value = '';
+            help.textContent = 'Enter age in whole years (0–150). Leave it blank if unknown; no birth date will be assumed.';
+            return;
+        }
+        dob.value = originalEstimated && age.value === String(originalAge)
+            ? originalDob : String(year - Number(age.value)) + '-01-01';
+        help.textContent = 'Estimated date of birth: ' + dob.value + ' (January 1, calculated from age).';
+    }
+    mode.addEventListener('change', function () {
+        if (mode.checked) { exactDob = dob.value; }
+        else { dob.value = exactDob; }
+        render();
+    });
+    age.addEventListener('input', render);
+    render();
+})();
 // Webcam photo at the desk. Needs HTTPS (or localhost) for the browser to allow the camera.
 (function () {
     var start = document.getElementById('cam-start'), snap = document.getElementById('cam-snap');

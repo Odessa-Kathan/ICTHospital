@@ -18,11 +18,11 @@
 </style>
 </head>
 <body>
-@php($institute = \Illuminate\Support\Facades\Schema::hasTable('institute') && \Illuminate\Support\Facades\Schema::hasColumn('institute', 'name') ? \Illuminate\Support\Facades\DB::table('institute')->value('name') : null)
+@php($institute = config('clinic.name'))
 <h1>{{ $institute ?: 'Outpatient consultation' }}</h1>
 <table class="meta">
   <tr><td><strong>Patient</strong></td><td>{{ optional($patient)->name }} (MR {{ optional($patient)->patient_id }})</td><td><strong>Date</strong></td><td>{{ $c->date }}</td></tr>
-  <tr><td><strong>Doctor</strong></td><td>{{ optional($doctor)->name }}</td><td><strong>Age / sex</strong></td><td>{{ optional($patient)->age }} {{ optional($patient)->sex }}</td></tr>
+  <tr><td><strong>Doctor</strong></td><td>{{ optional($doctor)->name }}</td><td><strong>Age / sex</strong></td><td>{{ optional($patient)->age }}{{ optional($patient)->birthdate_estimated ? ' (estimated)' : '' }} {{ optional($patient)->sex }}</td></tr>
   @if ($visit)<tr><td><strong>Vitals</strong></td><td colspan="3">BP {{ $visit->b_p ?: '-' }}, pulse {{ $visit->pulse ?: '-' }}, temp {{ $visit->temprature ?: '-' }}, weight {{ $visit->weight ?: '-' }}</td></tr>@endif
 </table>
 @foreach (['presenting_complaint' => 'Presenting complaint', 'history' => 'History', 'allergies' => 'Allergies'] as $k => $label)

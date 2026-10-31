@@ -71,7 +71,7 @@
                                     <tr>
                                         <td>{{ $patient->patient_id }}</td>
                                         <td><a href="{{ url('/patients/' . $patient->id) }}">{{ $patient->name }}</a></td>
-                                        <td>{{ $patient->age }}</td>
+                                        <td>{{ $patient->current_age }} @if ($patient->birthdate_estimated)<small class="text-muted">(estimated)</small>@endif</td>
                                         <td>{{ ucfirst($patient->sex) }}</td>
                                         <td>{{ $patient->phone }}</td>
                                         <td>{{ $patient->doctor }}</td>

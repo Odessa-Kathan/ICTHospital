@@ -476,7 +476,7 @@ $patients = DB::table('patient')->select('*')->get();
 	 */
 	protected function senderMask()
 	{
-		$name = DB::table('institute')->value('name');
+		$name = config('clinic.sms_sender_mask') ?: DB::table('institute')->value('name');
 
 		if (empty($name)) {
 			$name = config('app.name', 'ICTHospital');

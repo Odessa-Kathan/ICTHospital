@@ -19,7 +19,7 @@
 </style>
 </head>
 <body>
-  @php($institute = \Illuminate\Support\Facades\Schema::hasTable('institute') && \Illuminate\Support\Facades\Schema::hasColumn('institute', 'name') ? \Illuminate\Support\Facades\DB::table('institute')->value('name') : null)
+  @php($institute = config('clinic.name'))
   <div class="small"><strong>{{ $institute ?: 'OPD' }}</strong></div>
   <hr>
   <div class="small">Token</div>

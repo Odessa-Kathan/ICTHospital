@@ -16,7 +16,7 @@
         ===
     -->
     <meta charset="utf-8">
-    <title>ICTHospital</title>
+    <title>{{ config('clinic.name') }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="">
     <meta name="author" content="">
@@ -46,7 +46,7 @@
 
         <div class="row">
             <div class="col-md-12 center login-header">
-                <h2>Welcome to "{{$institute->name}}"</h2>
+                <h2>Welcome to "{{ config('clinic.name') }}"</h2>
             </div>
             <!--/span-->
         </div><!--/row-->
@@ -60,7 +60,7 @@
 
                     </div>
                 @endif
-                <img src="img/logo.png" style="height:120px;">
+                @include('layouts.clinic-brand')
                @if (count($errors) > 0)
         {{--<div class="alert alert-danger">
           <strong>Whoops!</strong> There were some problems with your input.<br><br>

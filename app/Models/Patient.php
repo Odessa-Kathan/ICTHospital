@@ -21,6 +21,7 @@ class Patient extends Model
         'phone',
         'sex',
         'birthdate',
+        'birthdate_estimated',
         'age',
         'bloodgroup',
         'ion_user_id',
@@ -39,4 +40,22 @@ class Patient extends Model
         'alt_phone',
         'city',
     ];
+
+    protected $casts = ['birthdate_estimated' => 'boolean'];
+
+    public function getCurrentAgeAttribute(): string
+    {
+        if ($this->birthdate) {
+            try {
+                $date = \Carbon\Carbon::createFromFormat('!Y-m-d', (string) $this->birthdate);
+                if ($date && $date->toDateString() === $this->birthdate && $date->lessThanOrEqualTo(today())) {
+                    return (string) (int) $date->age;
+                }
+            } catch (\Throwable $e) {
+                // Some legacy imports contain text rather than a calendar date.
+            }
+        }
+
+        return (string) ($this->attributes['age'] ?? '');
+    }
 }

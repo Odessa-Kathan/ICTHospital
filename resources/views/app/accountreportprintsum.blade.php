@@ -34,10 +34,10 @@
   <div class="row text-center">
 
   <div class="col-md-1 col-sm-1">
-  <img class="logo" src="{{url('/img/logo.png')}}">
+  <img class="logo" src="{{ asset('img/brand/icthospital-mark.svg') }}" alt="">
   </div>
     <div class="col-md-11 col-sm-11">
-        <h4><strong>"{{$institute->name}}" Accounting Report</strong></h4>
+        <h4><strong>"{{ config('clinic.name') }}" Accounting Report</strong></h4>
         <h5><strong>Establish:</strong> {{$institute->establish}}  <strong>Web:</strong> {{$institute->web}}  <strong>Email:</strong> {{$institute->email}}</h5>
         <h5><strong>Phone:</strong> {{$institute->phoneNo}} <strong>Address:</strong> {{$institute->address}}</h5>
       </div>

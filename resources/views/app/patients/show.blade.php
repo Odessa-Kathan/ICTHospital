@@ -52,8 +52,8 @@
                                     <tr><th>Patient type</th><td>{{ optional(\App\Models\PatientType::find($patient->patient_type_id))->name ?: 'General' }}</td></tr>
                                     <tr><th>CNIC</th><td>{{ $patient->cnic ?: '-' }}</td></tr>
                                     <tr><th>Father or guardian</th><td>{{ $patient->father_name ?: '-' }}{{ $patient->guardian_relation ? ' (' . $patient->guardian_relation . ')' : '' }}{{ $patient->guardian_mrn ? ', MR ' . $patient->guardian_mrn : '' }}</td></tr>
-                                    <tr><th>Date of birth</th><td>{{ $patient->birthdate ?: '-' }}</td></tr>
-                                    <tr><th>Age</th><td>{{ $patient->age !== '' ? $patient->age : '-' }}</td></tr>
+                                    <tr><th>Date of birth</th><td>{{ $patient->birthdate ?: '-' }} @if ($patient->birthdate_estimated)<span class="label label-warning">Estimated from age</span>@endif</td></tr>
+                                    <tr><th>Age</th><td>{{ $patient->current_age !== '' ? $patient->current_age : '-' }} @if ($patient->birthdate_estimated)<span class="text-muted">(estimated)</span>@endif</td></tr>
                                     <tr><th>Sex</th><td>{{ $patient->sex ? ucfirst($patient->sex) : '-' }}</td></tr>
                                     <tr><th>Blood group</th><td>{{ $patient->bloodgroup ?: '-' }}</td></tr>
                                     <tr><th>Phone</th><td>{{ $patient->phone ?: '-' }}</td></tr>

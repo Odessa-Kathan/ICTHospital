@@ -32,8 +32,12 @@ $permision[] = $permission->permission_name;
         ===
     -->
     <meta charset="utf-8">
-    <title>@if(Session::get('inName')=='') ICTHospital @else {{Session::get('inName')}} @endif</title>
+    <title>{{ config('clinic.name') }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      .clinic-print-heading { display: none; }
+      @media print { .clinic-print-heading { display: block; font-size: 20px; font-weight: bold; margin-bottom: 12px; } }
+    </style>
         <meta name="csrf-token" content="{{ csrf_token() }}" />
 
     <meta name="description" content="">
@@ -400,11 +404,7 @@ table i {
                             <div class="logo d-block d-lg-none">
 
                                 <a class="js-arrow" href="#">
-                                    @if(Session::get('inName')=='' || Session::get('inName')=='ICTHospital')
-                                    <img src="{{ asset('img/brand/icthospital-logo.svg') }}" alt="ICTHospital" style="height:34px" />
-                                    @else
-                                      <h2>{{Session::get('inName')}}</h2>
-                                    @endif
+                                    @include('layouts.clinic-brand')
                                 </a>
                             </div>
                             <div class="header-button-item js-item-menu">
@@ -678,13 +678,14 @@ table i {
                               <strong>{{ $error }}.</strong>
                             </div>
                           @endif
+                          <div class="clinic-print-heading">{{ config('clinic.name') }}</div>
                           @yield('content')
 
                           <!-- content ends -->
                           <div class="row">
                             <div class="col-md-12">
                                 <div class="copyright">
-                                   <p class="col-md-9 col-sm-9 col-xs-12 copyright"> <a href="#" target="_blank">{{Session::get('inName')}}</a> &copy;<?php echo date("Y");?></p>
+                                   <p class="col-md-9 col-sm-9 col-xs-12 copyright"> <a href="#" target="_blank">{{ config('clinic.name') }}</a> &copy;<?php echo date("Y");?></p>
                                     <p class="col-md-3 col-sm-3 col-xs-12 powered-by">Developed by:
                                     <a href="https://www.ictinnovations.com/" target="_blank" rel="noopener">ICT Innovations</a></p>
                                 </div>

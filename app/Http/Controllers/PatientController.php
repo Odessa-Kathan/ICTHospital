@@ -28,7 +28,9 @@ use App\Models\Payment;
 use App\Models\Prescription;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class PatientController extends BaseController
 {
@@ -170,7 +172,7 @@ class PatientController extends BaseController
     public function update(Request $request, $id)
     {
         $patient = Patient::findOrFail($id);
-        $data = $this->validated($request, $patient->id);
+        $data = $this->validated($request, $patient);
 
         $photo = $this->storePhoto($request);
         if ($photo !== null) {
@@ -198,8 +200,9 @@ class PatientController extends BaseController
      * date of birth still has to be registerable, otherwise the desk works around
      * the form with junk data and the record is worse than an incomplete one.
      */
-    private function validated(Request $request, $ignoreId = null)
+    private function validated(Request $request, ?Patient $patient = null)
     {
+        $ageOnly = $request->boolean('age_only');
         $rules = [
             'name' => 'required|string|max:100',
             'father_name' => 'nullable|string|max:100',
@@ -207,7 +210,11 @@ class PatientController extends BaseController
             'phone' => 'nullable|string|max:100',
             'address' => 'nullable|string|max:100',
             'sex' => 'nullable|in:male,female,other',
-            'birthdate' => 'nullable|date|before_or_equal:today',
+            'age_only' => 'sometimes|boolean',
+            'age' => $ageOnly ? 'nullable|integer|min:0|max:150' : 'exclude',
+            'birthdate' => $ageOnly ? 'exclude' : 'nullable|date|before_or_equal:today',
+            'birthdate_baseline' => 'nullable|string|max:4096',
+            'birthdate_reference_year' => 'nullable|string|max:4096',
             'bloodgroup' => 'nullable|in:' . implode(',', self::BLOOD_GROUPS),
             'doctor' => 'nullable|string|max:100',
             'photo' => 'nullable|image|max:2048',
@@ -243,14 +250,80 @@ class PatientController extends BaseController
             $data[$key] = $data[$key] ?? '';
         }
 
-        // The schema carries both birthdate and a varchar age. Derive age so the
-        // two cannot drift apart, which is what happened in the system this
-        // replaces, where age was typed by hand and never updated again.
-        $data['age'] = ! empty($data['birthdate'])
-            ? (string) \Carbon\Carbon::parse($data['birthdate'])->age
-            : '';
+        $data = array_merge($data, $this->birthDetails($request, $data, $patient, $ageOnly));
+        unset($data['age_only'], $data['birthdate_baseline'], $data['birthdate_reference_year']);
 
         return $data;
+    }
+
+    /** Resolve the selected mode on the server, including submissions without JavaScript. */
+    private function birthDetails(Request $request, array $data, ?Patient $patient, bool $ageOnly): array
+    {
+        $existing = $patient ? [
+            'birthdate' => $patient->birthdate,
+            'age' => $patient->current_age,
+            'birthdate_estimated' => $patient->birthdate_estimated,
+        ] : ['birthdate' => null, 'age' => '', 'birthdate_estimated' => false];
+
+        if ($ageOnly) {
+            if ($patient && ! $request->exists('age')) {
+                return $existing;
+            }
+            if (! isset($data['age']) || $data['age'] === '') {
+                return ['birthdate' => null, 'age' => '', 'birthdate_estimated' => false];
+            }
+
+            $age = (int) $data['age'];
+            $unchanged = $patient && $patient->birthdate_estimated
+                && $patient->birthdate && $age === (int) $patient->current_age;
+
+            // A signed snapshot also preserves an unchanged age when a form is
+            // opened in December and submitted after the year changes.
+            if ($patient && ! empty($data['birthdate_baseline'])) {
+                try {
+                    $baseline = json_decode(Crypt::decryptString($data['birthdate_baseline']), true, 512, JSON_THROW_ON_ERROR);
+                } catch (\Throwable $e) {
+                    throw ValidationException::withMessages(['age' => 'Please reload the patient form and try again.']);
+                }
+                if (($baseline['id'] ?? null) !== $patient->id
+                    || ($baseline['birthdate'] ?? null) !== $patient->birthdate
+                    || ($baseline['estimated'] ?? null) !== $patient->birthdate_estimated) {
+                    throw ValidationException::withMessages(['age' => 'The date of birth changed. Please reload the patient form.']);
+                }
+                $unchanged = $unchanged || ($patient->birthdate_estimated && $patient->birthdate
+                    && $age === (int) ($baseline['age'] ?? -1));
+            }
+
+            if (! $unchanged && ! empty($data['birthdate_reference_year'])) {
+                try {
+                    $referenceYear = Crypt::decryptString($data['birthdate_reference_year']);
+                } catch (\Throwable $e) {
+                    throw ValidationException::withMessages(['age' => 'Please reload the patient form and try again.']);
+                }
+                if ($referenceYear !== (string) now()->year) {
+                    throw ValidationException::withMessages(['age' => 'The year changed while this form was open. Review the updated estimated date and submit again.']);
+                }
+            }
+
+            return $unchanged ? $existing : [
+                'birthdate' => now()->startOfYear()->subYears($age)->toDateString(),
+                'age' => (string) $age,
+                'birthdate_estimated' => true,
+            ];
+        }
+
+        // Older clients may update unrelated fields without sending birthdate.
+        if ($patient && ! $request->exists('birthdate')) {
+            return $existing;
+        }
+        $date = ! empty($data['birthdate']) ? \Carbon\Carbon::parse($data['birthdate'])->toDateString() : null;
+
+        return [
+            'birthdate' => $date,
+            'age' => $date ? (string) (int) \Carbon\Carbon::parse($date)->age : '',
+            'birthdate_estimated' => $date && ! $request->exists('age_only') && $patient
+                && $patient->birthdate_estimated && $date === $patient->birthdate,
+        ];
     }
 
     /**

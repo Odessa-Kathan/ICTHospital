@@ -18,10 +18,10 @@
 </style>
 </head>
 <body>
-@php($institute = \Illuminate\Support\Facades\Schema::hasTable('institute') && \Illuminate\Support\Facades\Schema::hasColumn('institute', 'name') ? \Illuminate\Support\Facades\DB::table('institute')->value('name') : null)
+@php($institute = config('clinic.name'))
 <h1>{{ $institute ? $institute . ': ' : '' }}Radiology report</h1>
 <table>
-  <tr><td><strong>Patient</strong></td><td>{{ optional($patient)->name }} (MR {{ optional($patient)->patient_id }})</td><td><strong>Age / sex</strong></td><td>{{ optional($patient)->age }} {{ optional($patient)->sex }}</td></tr>
+  <tr><td><strong>Patient</strong></td><td>{{ optional($patient)->name }} (MR {{ optional($patient)->patient_id }})</td><td><strong>Age / sex</strong></td><td>{{ optional($patient)->age }}{{ optional($patient)->birthdate_estimated ? ' (estimated)' : '' }} {{ optional($patient)->sex }}</td></tr>
   <tr><td><strong>Exam</strong></td><td>{{ $order->name }} ({{ \App\Models\RadiologyExam::MODALITIES[$order->modality] ?? $order->modality }})</td><td><strong>Date</strong></td><td>{{ $order->performed_at ?: $order->created_at }}</td></tr>
   <tr><td><strong>Referred by</strong></td><td>{{ optional($doctor)->name }}</td><td><strong>Order</strong></td><td>#{{ $order->id }}</td></tr>
 </table>
